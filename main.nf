@@ -2,6 +2,8 @@
 
 params.project = "EcoliRNASeq"
 
+params.nbcpu = "8"
+
 params.bio_cond = ["WT_1","WT_2","MazF_1","MazF_2"]
 params.ftp_ebi = ["005/ERR2686025/ERR2686025" , "006/ERR2686026/ERR2686026", "007/ERR2686027/ERR2686027", "008/ERR2686028/ERR2686028"]
 params.ebi_fq = "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR268/"
@@ -92,7 +94,7 @@ process index_genome {
     """
     data=${genome_path}.1.bt2
     if [ ! -f \$data ]; then
-        bowtie2-build --threads 2 ${genome_path}.fna ${genome_path}
+        bowtie2-build --threads $params.nbcpu ${genome_path}.fna ${genome_path}
     fi
     """
 }
@@ -147,7 +149,7 @@ process cutadapt {
     """
     data=${params.fastq}/${bio_cond}_R1.fastq
     if [ ! -f \$data ]; then    
-        cutadapt -j 2 -b $params.read1Adapt -B $params.read2Adapt -o ${params.fastq}/${bio_cond}_R1.fastq -p ${params.fastq}/${bio_cond}_R2.fastq ${fastq_R1} ${fastq_R2}
+        cutadapt -j $params.nbcpu -b $params.read1Adapt -B $params.read2Adapt -o ${params.fastq}/${bio_cond}_R1.fastq -p ${params.fastq}/${bio_cond}_R2.fastq ${fastq_R1} ${fastq_R2}
     fi
     """   
 }
@@ -168,11 +170,11 @@ process fastQC {
     """
     data=${params.fastqc}/${data_fq_R1}_fastqc.html
     if [ ! -f \$data ]; then
-        fastqc -t 2 -o ${params.fastqc} ${data_fq_R1}.fastq
+        fastqc -t $params.nbcpu -o ${params.fastqc} ${data_fq_R1}.fastq
     fi
     data=${params.fastqc}/${data_fq_R2}_fastqc.html
     if [ ! -f \$data ]; then
-        fastqc -t 2 -o ${params.fastqc} ${data_fq_R2}.fastq
+        fastqc -t $params.nbcpu -o ${params.fastqc} ${data_fq_R2}.fastq
     fi
     
     """
@@ -195,7 +197,7 @@ process mapping {
     """
     data=${params.mapping}/${biocond}.sam
     if [ ! -f \$data ]; then
-        bowtie2 -p 2 -x $genome -1 ${params.fastq}/${data_R1}.fastq -2 ${params.fastq}/${data_R1}.fastq -S ${params.mapping}/${biocond}.sam > ${params.mapping}/${biocond}.log
+        bowtie2 -p $params.nbcpu -x $genome -1 ${params.fastq}/${data_R1}.fastq -2 ${params.fastq}/${data_R1}.fastq -S ${params.mapping}/${biocond}.sam > ${params.mapping}/${biocond}.log
     fi
     """
 }
@@ -215,9 +217,9 @@ process sam_to_bam {
     """
     data=${params.mapping}/${sam_file}.bam
     if [ ! -f \$data ]; then
-        samtools view -b -q 1 ${params.mapping}/${sam_file}.sam > ${params.mapping}/${sam_file}_raw.bam
-        samtools sort -o ${params.mapping}/${sam_file}.bam ${params.mapping}/${sam_file}_raw.bam
-        samtools index ${params.mapping}/${sam_file}.bam
+        samtools view --threads $params.nbcpu -b -q 1 ${params.mapping}/${sam_file}.sam > ${params.mapping}/${sam_file}_raw.bam
+        samtools sort --threads $params.nbcpu -o ${params.mapping}/${sam_file}.bam ${params.mapping}/${sam_file}_raw.bam
+        samtools index -@ $params.nbcpu ${params.mapping}/${sam_file}.bam
         rm ${params.mapping}/${sam_file}_raw.bam
     fi
     """
@@ -238,7 +240,7 @@ process gene_count {
     """
     data=${params.count}/${bam_file}.txt
     if [ ! -f \$data ]; then
-        featureCounts -t "gene" -a ${genome} -o ${params.count}/${bam_file}.txt ${params.mapping}/${bam_file}.bam
+        featureCounts -T $params.nbcpu -t "gene" -a ${genome} -o ${params.count}/${bam_file}.txt ${params.mapping}/${bam_file}.bam
     fi
     """
 }
@@ -253,7 +255,7 @@ process multiqc {
 
     script:
     """
-    multiqc -f -i $params.project -n $params.project -o $params.multiqc $params.path
+    multiqc -f -i $params.project -n $params.project -o $params.multiqc ${params.path}/.
     """
 
 }
