@@ -255,7 +255,10 @@ process multiqc {
 
     script:
     """
-    multiqc -f -i $params.project -n $params.project -o $params.multiqc ${params.path}/.
+    data=${params.multiqc}/${params.project}.html
+    if [ ! -f \$data ]; then
+        multiqc -f -i $params.project -n $params.project -o $params.multiqc ${params.path}/.
+    fi
     """
 
 }
