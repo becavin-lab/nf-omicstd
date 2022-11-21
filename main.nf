@@ -6,10 +6,10 @@ params.nbcpu = "8"
 
 params.bio_cond = ["WT_1","WT_2","MazF_1","MazF_2"]
 params.ftp_ebi = ["005/ERR2686025/ERR2686025" , "006/ERR2686026/ERR2686026", "007/ERR2686027/ERR2686027", "008/ERR2686028/ERR2686028"]
-params.ebi_fq = "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR268/"
+params.ebi_fq = "https://ftp.sra.ebi.ac.uk/vol1/fastq/ERR268/"
 
-params.fna_ftp = "ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/005/845/GCF_000005845.2_ASM584v2/GCF_000005845.2_ASM584v2_genomic.fna.gz"
-params.gtf_ftp = "ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/005/845/GCF_000005845.2_ASM584v2/GCF_000005845.2_ASM584v2_genomic.gtf.gz"
+params.fna_ftp = "https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/005/845/GCF_000005845.2_ASM584v2/GCF_000005845.2_ASM584v2_genomic.fna.gz"
+params.gtf_ftp = "https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/005/845/GCF_000005845.2_ASM584v2/GCF_000005845.2_ASM584v2_genomic.gtf.gz"
 params.genome_name = "Ecoli_K12"
 
 
@@ -37,17 +37,11 @@ process init_folder {
     if [ ! -d ${params.fastq} ]; then
         mkdir ${params.fastq}
     fi
-    if [ ! -d ${params.fastqc} ]; then
-        mkdir ${params.fastqc}
-    fi
     if [ ! -d ${params.mapping} ]; then
         mkdir ${params.mapping}
     fi
     if [ ! -d ${params.count} ]; then
         mkdir ${params.count}
-    fi
-    if [ ! -d ${params.multiqc} ]; then
-        mkdir ${params.multiqc}
     fi
     """
 }
@@ -58,7 +52,7 @@ process init_folder {
  * We have now to download the genome file of Escherichis coli K-12. We download first the sequence (fasta file) and then the annotation (gff file).
  */
 process dlGenome {
-    echo true
+    debug true
 
     input:
     stdin from folderCreated
@@ -105,7 +99,7 @@ process index_genome {
  * Test for eachf ile if the dataset was not already downloaded 
  */
  process dlFastQ {
-    echo true
+    debug true
 
     input:
     stdin from folderCreated
@@ -155,31 +149,6 @@ process cutadapt {
 }
 
 
-/*
- * Control quality of fastq files after cutadapt
- */
-process fastQC {
-    input:
-    val data_fq_R1 from data_cut_R1
-    val data_fq_R2 from data_cut_R2
-
-    output: 
-    stdout into fastqc
-
-    script:
-    """
-    data=${params.fastqc}/${data_fq_R1}_fastqc.html
-    if [ ! -f \$data ]; then
-        fastqc -t $params.nbcpu -o ${params.fastqc} ${data_fq_R1}.fastq
-    fi
-    data=${params.fastqc}/${data_fq_R2}_fastqc.html
-    if [ ! -f \$data ]; then
-        fastqc -t $params.nbcpu -o ${params.fastqc} ${data_fq_R2}.fastq
-    fi
-    
-    """
-}
-
 
 /*
  * Run mapping of reads with bowtie2
@@ -207,7 +176,7 @@ process mapping {
  */
 process sam_to_bam {
     
-    echo true
+    debug true
     input:
     val sam_file from sam_files
 
@@ -243,22 +212,4 @@ process gene_count {
         featureCounts -T $params.nbcpu -t "gene" -a ${genome} -o ${params.count}/${bam_file}.txt ${params.mapping}/${bam_file}.bam
     fi
     """
-}
-
-/*
- * Run final qc process
- */
-process multiqc {
-    input:
-    val stdin from mappFinish
-    val stdin2 from fastqc
-
-    script:
-    """
-    data=${params.multiqc}/${params.project}.html
-    if [ ! -f \$data ]; then
-        multiqc -f -i $params.project -n $params.project -o $params.multiqc ${params.path}/.
-    fi
-    """
-
 }
