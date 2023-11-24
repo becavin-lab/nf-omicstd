@@ -1,0 +1,22 @@
+FROM debian
+
+MAINTAINER MasterBIM
+
+RUN apt-get -qq update;apt-get -qq -y install wget bzip2 curl gcc make libbz2-dev procps;\
+	conda update -n base -c defaults conda ; \
+    conda install -y -c bioconda/label/cf201901 subread ;\
+    conda install -y -c bioconda cutadapt bowtie2 fastqc;\
+    pip install multiqc ;\
+    conda clean --all --yes ;\
+    wget https://github.com/samtools/samtools/releases/download/1.11/samtools-1.11.tar.bz2 ;\
+	tar xvjf samtools-1.11.tar.bz2 ;\
+    cd samtools-1.11 ;\
+    ./configure --prefix /usr/bin/samtools-1.11 ; \
+    make ;\
+    make install ;\
+	apt-get -qq -y autoremove ;\
+  	apt-get autoclean ;\
+    rm -rf /var/lib/apt/lists/* /var/log/dpkg.log
+    
+ENV PATH /opt/conda/bin:$PATH
+ENV PATH=$PATH:/usr/bin/samtools-1.11/bin

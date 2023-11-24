@@ -1,0 +1,46 @@
+FROM debian
+
+MAINTAINER MasterBBC
+
+# mettre a jour debian et installer les librairies necessaires
+RUN apt-get update && \
+	apt-get -y install wget unzip bzip2 curl gcc make && \
+# install java
+    	apt-get -y install default-jre && \
+# install python
+	apt-get install -y python3-setuptools && \
+
+# install fastqc
+RUN cd /usr/bin/; \
+	wget https://www.bioinformatics.babraham.ac.uk/projects/fastqc/fastqc_v0.12.1.zip; \
+	unzip fastqc_v0.12.1.zip
+
+
+# samtools
+RUN apt-get -y install libz-dev libncurses5-dev
+RUN apt-get -y install libbz2-dev liblzma-dev
+RUN wget https://github.com/samtools/samtools/releases/download/1.18/samtools-1.18.tar.bz2 ;\
+	tar xvjf samtools-1.18.tar.bz2 ;\
+    cd samtools-1.18 ;\
+    ./configure --prefix /usr/bin/samtools-1.18 ; \
+    make ;\
+    make install
+
+# Bowtie2
+RUN apt-get install -y bowtie2
+
+# cutadapt
+RUN apt-get install -y cutadapt
+
+# multiqc
+RUN apt-get install -y python3-virtualenv
+RUN apt-get install -y python3-pip
+RUN virtualenv multiqc-venv
+RUN multiqc-venv/bin/pip install multiqc
+
+
+ENV PATH=$PATH:/usr/bin/samtools-1.11/bin
+ENV PATH=$PATH:/usr/bin/FastQC/
+
+CMD virtualenv multiqc-venv
+
