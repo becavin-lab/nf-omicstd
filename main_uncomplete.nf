@@ -16,27 +16,20 @@ workflow {
     ftp_ebis = Channel.of([1,"005/ERR2686025/ERR2686025"], [2,"006/ERR2686026/ERR2686026"], [3,"007/ERR2686027/ERR2686027"], [4,"008/ERR2686028/ERR2686028"])
     // channel combiné
     bio_cond_ftp_ebis = bio_conds.cross(ftp_ebis)
-
+    bio_cond_ftp_ebis.view()
+    
     // Telechargement du genome et indexation
-    DL_GENOME | INDEX_GENOME
-
+    
     // Telecharger les reads
-    DL_FASTQ(bio_cond_ftp_ebis)
     
     // Trim des adapters
-    CUTADAPT(bio_conds, DL_FASTQ.out)
-    FASTQC(CUTADAPT.out)
-
+    
     // Mapping et convert to bam
-    MAPPING(INDEX_GENOME.out, CUTADAPT.out)
-    //MAPPING.out.view()
-    SAM_TO_BAM(MAPPING.out)
-
+    
     // Comptage des reads sur chaque gene
-    GENE_COUNT(SAM_TO_BAM.out, DL_GENOME.out.genome_gtf)
-
+    
     // Final run avec multiqc
-    MULTIQC(FASTQC.out.collect(), GENE_COUNT.out.collect())
+    
 
 }
 
@@ -55,11 +48,11 @@ process DL_GENOME {
     """
     fna_file=${params.genome_name}.fna
     gtf_file=${params.genome_name}.gtf
-    echo "Downloaded fasta file" ${params.fna_ftp}
-    wget -c -O \${fna_file}.gz ${params.fna_ftp}
+    echo "Download fasta file" ${params.fna_ftp}
+    curl -o \${fna_file}.gz ${params.fna_ftp}
     gunzip -d \${fna_file}.gz
-    echo "Downloaded fasta file" ${params.gtf_ftp}   
-    wget -c -O \${gtf_file}.gz ${params.gtf_ftp}
+    echo "Download fasta file" ${params.gtf_ftp}   
+    curl -o \${gtf_file}.gz ${params.gtf_ftp}
     gunzip -d \${gtf_file}.gz
     """
 }
