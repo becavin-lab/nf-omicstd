@@ -36,6 +36,7 @@ workflow {
     GENE_COUNT(SAM_TO_BAM.out, DL_GENOME.out.genome_gtf)
 
     // Final run avec multiqc
+    FASTQC.out.collect().view()
     MULTIQC(FASTQC.out.collect(), GENE_COUNT.out.collect())
 
 }
